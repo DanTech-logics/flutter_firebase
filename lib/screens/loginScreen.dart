@@ -191,6 +191,13 @@ class _LoginScreenState extends State<LoginScreen> {
       _errorMessage = '';
     });
 
+    if (!_isLogin && _passwordController.text.trim().length < 8) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Password must be at least 8 characters long.';
+      });
+      return;
+    }
     try {
       UserCredential userCredential;
       if (_isLogin) {
@@ -277,23 +284,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  InputDecoration _buildInputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: TextStyle(color: Colors.black),
-      prefixIcon: Icon(icon, color: Colors.black),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: BorderSide(color: Colors.black),
-      ),
-      contentPadding: EdgeInsets.all(15),
-    );
-  }
-
   // Build Social Media Sign-In Buttons
   Widget _buildSocialButtons() {
     return Row(
@@ -334,31 +324,50 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleGoogleSignIn() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = '';
+      _errorMessage = '';  // Reset error message
     });
 
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      final GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
+      if (googleUser == null) {
+        setState(() {
+          _errorMessage = 'Google Sign-In was canceled by the user';
+        });
+        return;
+      }
+
+      final GoogleSignInAuthentication? googleAuth = await googleUser.authentication;
+      if (googleAuth == null || googleAuth.idToken == null || googleAuth.accessToken == null) {
+        setState(() {
+          _errorMessage = 'Google authentication failed';
+        });
+        return;
+      }
+
       final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth?.accessToken,
-        idToken: googleAuth?.idToken,
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
 
       UserCredential userCredential = await _auth.signInWithCredential(credential);
 
-      // Save user data in Firestore for Google Sign-In
+      if (userCredential.user == null) {
+        setState(() {
+          _errorMessage = 'User credential is null';
+        });
+        return;
+      }
       await _firestore.collection('users').doc(userCredential.user?.uid).set({
         'email': userCredential.user?.email,
         'displayName': userCredential.user?.displayName,
         'lastSignIn': DateTime.now(),
       }, SetOptions(merge: true));
-
       _login(context);
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to sign in with Google';//: ${e.toString()}';
+        _errorMessage = 'Failed to sign in with Google: ${e.toString()}';
       });
+      print('Failed to sign in with Google: ${e.toString()}');
     } finally {
       setState(() {
         _isLoading = false;
@@ -384,7 +393,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _login(context);
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to sign in with Apple';//: ${e.toString()}';
+        _errorMessage = 'Failed to sign in with Apple : ${e.toString()}';//';
         print('Failed to sign in with Apple: ${e.toString()}');
       });
     } finally {

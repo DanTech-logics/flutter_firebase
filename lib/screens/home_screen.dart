@@ -1,5 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'loginScreen.dart';
 
 class HomeScreen extends StatelessWidget {
   final User? user;
@@ -12,17 +15,8 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Welcome Home'),
-        backgroundColor: Colors.deepPurple,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              Navigator.of(context).pushReplacementNamed('/login');
-            },
-          )
-        ],
+        title: const Text('Welcome Home',style: TextStyle(color: Colors.white),),
+        backgroundColor: Colors.black,
       ),
       body: Center(
         child: Column(
@@ -43,12 +37,17 @@ class HomeScreen extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: () async {
                 await FirebaseAuth.instance.signOut();
-                Navigator.of(context).pushReplacementNamed('/login');
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool('isLoggedIn', false);
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => LoginScreen()),
+                      (route) => false,
+                );
               },
               icon: const Icon(Icons.logout),
-              label: const Text('Logout'),
+              label: const Text('Logout',style: TextStyle(color: Colors.white),),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
+                backgroundColor: Colors.black,
               ),
             ),
           ],
